@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>내 예약 내역 - 경동대학교 셔틀버스</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Malgun Gothic', sans-serif; 
+            background: #f5f7fa; 
+            color: #252525;
+            margin: 0; 
+            padding: 24px 16px 48px; 
+        }
+        
+        .container { 
+            width: min(880px, 100%); 
+            margin: 0 auto; 
+            background: #fff; 
+            padding: 32px; 
+            border-radius: 18px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,.07); 
+        }
+        
+        h2 { 
+            font-size: 22px; 
+            margin: 0 0 24px 0; 
+            padding-bottom: 20px; 
+            border-bottom: 1px solid #eceff2; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+        }
+        
+        .nav-link { 
+            font-size: 14px; 
+            color: #666; 
+            text-decoration: none; 
+            font-weight: 600; 
+            padding: 8px 12px;
+            border: 1px solid #e2e5e9;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+        .nav-link:hover { background: #f8fafc; color: #222; border-color: #cfd5da; }
+        
+        .section-title { font-size: 18px; margin: 30px 0 16px; color: #222; }
+        .section-title:first-of-type { margin-top: 0; }
+        
+        .history-list { display: grid; gap: 16px; }
+        .history-card { 
+            border: 1px solid #e5e8eb; 
+            border-radius: 14px; 
+            padding: 24px; 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center;
+            background: #fff;
+            gap: 16px;
+            flex-wrap: wrap;
+        }
+        
+        /* 지난 예약 카드 스타일 (흐리게 처리) */
+        .history-card.past { background: #fafbfc; border-color: #f0f2f4; }
+        .history-card.past .info { opacity: 0.6; }
+        
+        .info { color: #59636e; font-size: 15px; line-height: 1.6; }
+        .info b { color: #252525; font-size: 1.1em; font-weight: 800; }
+        .status-row { margin-bottom: 12px; display: flex; align-items: center; gap: 10px; flex-wrap: wrap;}
+        .date-text { color: #91979d; font-size: 13px; }
+        
+        .badge { display: inline-block; padding: 6px 10px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+        .badge-green { background: #e8f7ef; color: #087443; } 
+        .badge-red { background: #fff0f0; color: #c62828; }  
+        .badge-gray { background: #f0f2f4; color: #6a7076; }
+        
+        .action-group { display: flex; gap: 8px; flex-wrap: wrap; }
+        
+        /* 탑승 위치 버튼 (블랙) */
+        .btn-info { 
+            background: #222; color: white; border: none; 
+            padding: 12px 18px; border-radius: 10px; cursor: pointer; 
+            font-weight: 800; font-size: 14px; transition: background 0.2s;
+        }
+        .btn-info:hover { background: #444; }
+        
+        /* 예약 취소 버튼 (레드 톤) */
+        .btn-danger { 
+            background: #ffe9e9; color: #c62828; border: none; 
+            padding: 12px 18px; border-radius: 10px; cursor: pointer; 
+            font-weight: 800; font-size: 14px; transition: background 0.2s;
+        }
+        .btn-danger:hover { background: #ffdbdb; }
+        
+        /* 취소 불가 상태 버튼 */
+        .btn-disabled {
+            background: #eef0f2; color: #91979d; border: none; 
+            padding: 12px 18px; border-radius: 10px; font-weight: 800; 
+            font-size: 14px; cursor: not-allowed;
+        }
+        
+        .no-data { 
+            text-align: center; color: #70777e; padding: 40px 20px; 
+            font-size: 15px; background: #f8fafc; border-radius: 14px; 
+            border: 1px dashed #cfd5da;
+        }
+        
+        /* 모달 스타일 */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); backdrop-filter: blur(4px); justify-content: center; align-items: center; z-index: 1000; padding: 16px;}
+        .modal-content { background: white; padding: 32px; border-radius: 18px; max-width: 600px; width: 100%; text-align: center; box-shadow: 0 20px 40px rgba(0,0,0,0.15); }
+        .close-btn { background-color: #f0f2f4; color: #252525; border: none; padding: 12px 30px; border-radius: 10px; cursor: pointer; margin-top: 20px; font-weight: 800; font-size: 15px; transition: background 0.2s;}
+        .close-btn:hover { background-color: #e2e5e9; }
+        
+        /* 💡 핵심 수정: 모바일 반응형을 위한 aspect-ratio 도입 */
+        .map-view-window {
+            width: 100%;
+            /* 고정된 height(예: 300px)를 삭제하고 비율로 설정합니다 */
+            aspect-ratio: 16 / 6; 
+            margin-top: 20px;
+            border-radius: 12px;
+            border: 1px solid #e5e8eb;
+            background-image: url('/static/탑승장.png'); /* 또는 탑승장.jpg */
+            background-size: 100% auto;
+            background-repeat: no-repeat;
+            background-position: 7% 7%;
+            transition: background-position 0.3s ease-in-out;
+        }
+        
+        @media (max-width: 640px) {
+            .map-view-window {
+                /* 모바일에서는 세로를 살짝 더 길게 줘서 지도가 잘리지 않게 조정 */
+                aspect-ratio: 16 / 6; 
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>
+        나의 예약 내역 ({{ session['student_id'] }})
+        <a href="/" class="nav-link">← 메인으로 돌아가기</a>
+    </h2>
+    
+    <h3 class="section-title">다가오는 예약</h3>
+    <div id="active-list" class="history-list"></div>
+
+    <h3 class="section-title" style="margin-top: 48px;">지난 예약 내역</h3>
+    <div id="past-list" class="history-list"></div>
+</div>
+
+<!-- 탑승장 안내 모달 -->
+<div id="mapModal" class="modal">
+    <div class="modal-content">
+        <h3 id="mapTitle" style="margin: 0; font-size: 20px; color: #252525;">탑승장 위치 안내</h3>
+        
+        <div id="mapViewWindow" class="map-view-window"></div>
+        <button class="close-btn" onclick="closeMap()">닫기</button>
+    </div>
+</div>
+
+<script>
+    // 서버에서 전달받은 예약 데이터를 자바스크립트 배열로 변환
+    const reservations = [
+        {% for res in reservations %}
+        {
+            id: {{ res.reservation_id }},
+            ride_date: "{{ res.ride_date }}",
+            departure_time: "{{ res.departure_time }}",
+            status: "{{ res.status }}",
+            created_at: "{{ res.created_at }}",
+            route_name: "{{ res.route_name }}",
+            direction: "{{ res.direction }}"
+        }{% if not loop.last %},{% endif %}
+        {% endfor %}
+    ];
+
+    const activeList = document.getElementById('active-list');
+    const pastList = document.getElementById('past-list');
+    const now = new Date();
+    
+    let activeCount = 0;
+    let pastCount = 0;
+
+    function escapeHtml(value) {
+        return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    }
+
+    reservations.forEach(res => {
+        // 예약의 출발 날짜/시간 객체 생성
+        const [year, month, day] = res.ride_date.split('-');
+        const [hour, minute] = res.departure_time.split(':');
+        const depDate = new Date(year, month - 1, day, hour, minute);
+        
+        // 과거 판단 여부
+        const isPast = now >= depDate;
+        const isActive = res.status === 'ACTIVE' && !isPast;
+
+        // 뱃지 렌더링
+        let statusBadge = '';
+        if (res.status === 'CANCELED' || res.status === 'CANCELLED') {
+            statusBadge = '<span class="badge badge-red">예약 취소됨</span>';
+        } else if (isPast) {
+            statusBadge = '<span class="badge badge-gray">이용 완료</span>';
+        } else {
+            statusBadge = '<span class="badge badge-green">예약 확정</span>';
+        }
+
+        const card = document.createElement('div');
+        card.className = `history-card ${isActive ? '' : 'past'}`;
+        
+        // 다가오는 예약(isActive)인 경우에만 버튼 생성
+        let actionButtons = '';
+        if (isActive) {
+            // 취소 가능 여부 (출발 10분 전까지)
+            const cancelDeadline = new Date(depDate.getTime() - 10 * 60000);
+            const canCancel = now < cancelDeadline;
+            
+            actionButtons = `
+                <div class="action-group">
+                    <button class="btn-info" onclick="showMap('${escapeHtml(res.route_name)}')">탑승 위치</button>
+                    ${canCancel 
+                        ? `<button class="btn-danger" onclick="cancelReservation(${res.id})">예약 취소</button>` 
+                        : `<button class="btn-disabled" disabled>취소 마감</button>`}
+                </div>
+            `;
+        }
+
+        // 카드 내용 조합
+        card.innerHTML = `
+            <div class="info">
+                <div class="status-row">
+                    ${statusBadge}
+                    <span class="date-text">예약일: ${escapeHtml(res.created_at)}</span>
+                </div>
+                <div style="margin-bottom: 4px;">탑승 날짜: <b>${escapeHtml(res.ride_date)}</b></div>
+                <div>노선 정보: <b>[${escapeHtml(res.route_name)}] ${escapeHtml(res.direction)} (${escapeHtml(res.departure_time)} 출발)</b></div>
+            </div>
+            ${actionButtons}
+        `;
+
+        // 리스트에 분배
+        if (isActive) {
+            activeList.appendChild(card);
+            activeCount++;
+        } else {
+            pastList.appendChild(card);
+            pastCount++;
+        }
+    });
+
+    // 빈 리스트 처리
+    if (activeCount === 0) activeList.innerHTML = '<div class="no-data">다가오는 예약이 없습니다.</div>';
+    if (pastCount === 0) pastList.innerHTML = '<div class="no-data">지난 예약 내역이 없습니다.</div>';
+
+    // 탑승장 모달 함수
+    function showMap(routeName) {
+        document.getElementById('mapTitle').innerText = `[${routeName}] 탑승 위치 안내`;
+        const mapWindow = document.getElementById('mapViewWindow');
+        
+        if (routeName === '도봉산') {
+            mapWindow.style.backgroundPositionY = '3%';
+        } else if (routeName === '양주') {
+            mapWindow.style.backgroundPositionY = '21%';
+        } else if (routeName === '의정부') {
+            mapWindow.style.backgroundPositionY = '79%';
+        } else {
+            mapWindow.style.backgroundPositionY = '0%';
+        }
+
+        document.getElementById('mapModal').style.display = 'flex';
+    }
+
+    function closeMap() {
+        document.getElementById('mapModal').style.display = 'none';
+    }
+
+    // 예약 취소 처리 함수
+    async function cancelReservation(reservationId) {
+        if(!confirm("정말로 이 예약을 취소하시겠습니까?")) return;
+
+        try {
+            const response = await fetch('/cancel', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ reservation_id: reservationId })
+            });
+            const result = await response.json();
+            
+            if(response.ok) {
+                alert("예약이 성공적으로 취소되었습니다.");
+                location.reload(); // 성공 시 페이지 새로고침하여 상태 변경 반영
+            } else {
+                alert(result.error || "취소 처리에 실패했습니다.");
+            }
+        } catch (error) {
+            alert("서버와 통신 중 문제가 발생했습니다.");
+        }
+    }
+</script>
+
+</body>
+</html>

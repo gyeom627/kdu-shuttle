@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>경동대학교 셔틀버스 - 로그인</title>
+    <style>
+        * { box-sizing: border-box; }
+        body { 
+            font-family: 'Malgun Gothic', sans-serif; 
+            background: #f5f7fa; 
+            display: flex; 
+            justify-content: center; 
+            align-items: center; 
+            min-height: 100vh; 
+            margin: 0;
+            padding: 20px;
+        }
+        
+        .login-container {
+            background: #fff;
+            padding: 48px 40px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.07);
+            text-align: center;
+            width: 100%;
+            max-width: 420px;
+        }
+        h2 { 
+            color: #252525; 
+            margin: 0 0 32px 0; 
+            font-size: 24px;
+            letter-spacing: -0.5px;
+        }
+        
+        input[type="text"] {
+            width: 100%;
+            padding: 16px;
+            margin-bottom: 20px;
+            border: 1px solid #cfd5da;
+            border-radius: 12px;
+            font-size: 16px;
+            background: #fcfcfc;
+            transition: border-color 0.2s;
+            outline: none;
+        }
+        input[type="text"]:focus {
+            border-color: #222;
+            background: #fff;
+        }
+        
+        .btn-login {
+            background: #222;
+            color: white;
+            border: none;
+            padding: 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 800;
+            font-size: 16px;
+            width: 100%;
+            transition: background 0.2s;
+        }
+        .btn-login:hover { background: #444; }
+        
+        .error-msg { 
+            color: #c62828; 
+            background: #fff0f0;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px; 
+            font-size: 14px;
+            font-weight: 600; 
+        }
+        
+        .signup-link-area {
+            margin-top: 24px;
+            padding-top: 24px;
+            border-top: 1px solid #eceff2;
+        }
+    </style>
+</head>
+<body>
+
+<div class="login-container">
+    <h2>셔틀버스 예약 시스템</h2>
+    
+    {% if error %}
+    <div class="error-msg">{{ error }}</div>
+    {% endif %}
+    
+    <form action="/login" method="POST">
+        <input type="text" name="student_id" placeholder="학번을 입력하세요 (예: 2221002)" required autofocus>
+        <button type="submit" class="btn-login">로그인</button>
+    </form>
+    
+    <div class="signup-link-area">
+        <span style="color: #70777e; font-size: 14px;">처음 오셨나요?</span>
+        <a href="/signup" style="color: #252525; font-weight: 800; text-decoration: none; font-size: 14px; margin-left: 6px;">회원가입</a>
+    </div>
+</div>
+
+</body>
+</html>

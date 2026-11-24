@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>경동대학교 셔틀버스 예약</title>
+    <style>
+        * { box-sizing: border-box; }
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: #f5f7fa;
+            color: #252525;
+            margin: 0;
+            padding: 24px 16px 48px;
+        }
+        .container {
+            width: min(880px, 100%);
+            margin: 0 auto;
+            background: #fff;
+            border-radius: 18px;
+            box-shadow: 0 10px 30px rgba(0,0,0,.07);
+            overflow: hidden;
+        }
+        .header { padding: 24px; border-bottom: 1px solid #eceff2; }
+        .header-top { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+        h1 { margin: 0; font-size: 24px; }
+        .user-info { color: #666; font-size: 14px; margin-top: 7px; }
+        
+        .nav { display: flex; gap: 8px; flex-wrap: wrap; }
+        .nav a { text-decoration: none; color: #333; padding: 9px 12px; border: 1px solid #e2e5e9; border-radius: 9px; background: #fff; font-weight: 600; font-size: 13px; }
+        
+        .content { padding: 24px; }
+        
+        .date-box { background: #f8fafc; border: 1px solid #e7ebef; border-radius: 14px; padding: 18px; margin-bottom: 20px; }
+        #ride_date { width: 100%; padding: 12px; border: 1px solid #cfd5da; border-radius: 10px; font-size: 16px; background: #fff; margin-top: 10px;}
+        .notice { margin-top: 10px; color: #5f6368; font-size: 13px; min-height: 18px; }
+        
+        /* 필터링 탭 스타일 */
+        .filter-section { margin-bottom: 24px; }
+        .filter-group { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+        .filter-btn { padding: 8px 16px; border: 1px solid #cfd5da; border-radius: 20px; background: #fff; color: #555; cursor: pointer; font-weight: 600; font-size: 14px; transition: all 0.2s; }
+        .filter-btn.active { background: #222; color: #fff; border-color: #222; }
+        
+        .section-title { margin: 0 0 14px; font-size: 18px; }
+        .schedule-list { display: grid; gap: 12px; }
+        
+        /* 셔틀 카드 기본 스타일 */
+        .schedule-card { display: flex; align-items: center; justify-content: space-between; gap: 18px; border: 1px solid #e5e8eb; border-radius: 14px; padding: 18px; background: #fff; transition: all 0.2s; }
+        
+        /* 💡 추가됨: 이미 지난 셔틀(과거/종료)을 흐리게 처리하는 클래스 */
+        .schedule-card.past { background: #fafbfc; border-color: #f0f2f4; }
+        .schedule-card.past .time, 
+        .schedule-card.past .route, 
+        .schedule-card.past .seat { opacity: 0.5; }
+        
+        .time { font-size: 30px; font-weight: 800; letter-spacing: -1px; }
+        .route { margin-top: 5px; color: #59636e; font-size: 14px; }
+        .seat { margin-top: 10px; font-size: 14px; font-weight: 700; }
+        
+        .badge { display: inline-block; margin-top: 10px; padding: 6px 9px; border-radius: 999px; font-size: 12px; font-weight: 700; }
+        .badge-green { background: #e8f7ef; color: #087443; }
+        .badge-gray { background: #f0f2f4; color: #6a7076; }
+        .badge-red { background: #fff0f0; color: #c62828; }
+        
+        button.action-btn { border: 0; border-radius: 10px; padding: 12px 16px; font-weight: 800; cursor: pointer; min-width: 110px; font-size: 15px;}
+        .primary { background: #222; color: #fff; }
+        .danger { background: #ffe9e9; color: #c62828; }
+        button.action-btn:disabled { background: #eef0f2; color: #91979d; cursor: not-allowed; }
+        
+        .empty, .error, .loading { text-align: center; padding: 42px 20px; border: 1px dashed #d8dde2; border-radius: 14px; color: #70777e; }
+        .error { color: #b42318; background: #fff8f7; }
+        
+        @media (max-width: 640px) {
+            .header-top, .schedule-card { align-items: stretch; flex-direction: column; }
+            .nav a, .schedule-card button.action-btn { width: 100%; text-align: center; }
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <header class="header">
+        <div class="header-top">
+            <div>
+                <h1>경동대학교 셔틀버스</h1>
+                <div class="user-info"><b>{{ name }}</b> ({{ student_id }})님</div>
+            </div>
+            <nav class="nav">
+                <a href="/mypage">내 예약 (탑승장 안내)</a>
+                <a href="/logout">로그아웃</a>
+            </nav>
+        </div>
+    </header>
+
+    <main class="content">
+        <section class="date-box">
+            <label for="ride_date"><b>탑승 날짜</b></label>
+            <input type="date" id="ride_date" onchange="fetchSchedules()">
+            <div id="booking-notice" class="notice"></div>
+        </section>
+
+        <!-- 필터링 탭 구역 -->
+        <section class="filter-section">
+            <div class="filter-group" id="route-filters">
+                <button class="filter-btn active" onclick="setFilter('route', 'all')">전체 노선</button>
+                <button class="filter-btn" onclick="setFilter('route', '도봉산')">도봉산</button>
+                <button class="filter-btn" onclick="setFilter('route', '양주')">양주</button>
+                <button class="filter-btn" onclick="setFilter('route', '의정부')">의정부</button>
+            </div>
+            <div class="filter-group" id="direction-filters">
+                <button class="filter-btn active" onclick="setFilter('direction', 'all')">전체 방향</button>
+                <button class="filter-btn" onclick="setFilter('direction', '등교')">등교</button>
+                <button class="filter-btn" onclick="setFilter('direction', '하교')">하교</button>
+            </div>
+        </section>
+
+        <h2 class="section-title">운행 시간표</h2>
+        <div id="schedule-list" class="schedule-list">
+            <div class="loading">시간표를 불러오는 중입니다.</div>
+        </div>
+    </main>
+</div>
+
+<script>
+    const dateInput = document.getElementById('ride_date');
+    const listDiv = document.getElementById('schedule-list');
+    const noticeDiv = document.getElementById('booking-notice');
+
+    let allSchedules = []; // 서버에서 받아온 전체 스케줄 저장용 변수
+    let currentFilterRoute = 'all';
+    let currentFilterDirection = 'all';
+
+    dateInput.valueAsDate = new Date();
+    fetchSchedules();
+
+    // 필터 버튼 클릭 시 상태 업데이트 및 다시 그리기
+    function setFilter(type, value) {
+        if (type === 'route') {
+            currentFilterRoute = value;
+            document.querySelectorAll('#route-filters .filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.includes(value === 'all' ? '전체 노선' : value));
+            });
+        } else {
+            currentFilterDirection = value;
+            document.querySelectorAll('#direction-filters .filter-btn').forEach(btn => {
+                btn.classList.toggle('active', btn.innerText.includes(value === 'all' ? '전체 방향' : value));
+            });
+        }
+        renderSchedules();
+    }
+
+    function escapeHtml(value) {
+        return String(value).replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;').replaceAll("'", '&#039;');
+    }
+
+    function renderButton(sch) {
+        // 1. 이미 지나간 셔틀은 내 예약 여부 상관없이 가장 먼저 '운행 종료' 처리
+        if (sch.is_past) return '<button class="action-btn" disabled>과거 날짜</button>';
+        if (sch.is_departed) return '<button class="action-btn" disabled>운행 종료</button>';
+        
+        // 2. 이후는 아직 출발 안 한 셔틀들
+        if (sch.status === 'reserved') {
+            if (sch.can_cancel) return `<button class="action-btn danger" onclick="cancelReservation(${sch.my_reservation_id})">예약 취소</button>`;
+            return `<button class="action-btn" disabled>취소 마감</button>`;
+        }
+        
+        if (sch.status === 'not_open') return '<button class="action-btn" disabled>예약 오픈 전</button>';
+        if (sch.status === 'full') return '<button class="action-btn" disabled>예약 마감</button>';
+        
+        return `<button class="action-btn primary" onclick="makeReservation(${sch.schedule_id})">예약하기</button>`;
+    }
+
+    function renderBadge(sch) {
+        if (sch.status === 'reserved') return '<span class="badge badge-green">내 예약</span>';
+        if (sch.status === 'full') return '<span class="badge badge-red">좌석 마감</span>';
+        if (sch.status === 'available') return `<span class="badge badge-green">잔여 ${sch.remaining_seats}석</span>`;
+        return '<span class="badge badge-gray">예약 불가</span>';
+    }
+
+    // 💡 화면 그리기 함수 (필터 및 스마트 정렬 적용)
+    function renderSchedules() {
+        listDiv.innerHTML = '';
+
+        // 1. 설정된 탭 조건에 맞는 스케줄만 필터링
+        let filteredSchedules = allSchedules.filter(sch => {
+            const routeMatch = (currentFilterRoute === 'all') || (sch.route_name === currentFilterRoute);
+            const directionMatch = (currentFilterDirection === 'all') || (sch.direction === currentFilterDirection);
+            return routeMatch && directionMatch;
+        });
+
+        if (filteredSchedules.length === 0) {
+            listDiv.innerHTML = '<div class="empty">선택한 조건에 맞는 운행 셔틀이 없습니다.</div>';
+            return;
+        }
+
+        // 2. 스마트 정렬 로직 (우선순위 배정)
+        const getPriority = (sch) => {
+            // 이미 출발했거나 과거인 셔틀은 내 예약이든 아니든 무조건 최하위(4순위)로 쫓아냅니다.
+            if (sch.is_departed || sch.is_past) return 4;
+            
+            // 아직 출발 안 한 미래의 셔틀들 중에서 우선순위 배정
+            if (sch.status === 'reserved') return 1;
+            if (sch.status === 'available') return 2;
+            if (sch.status === 'full' || sch.status === 'not_open') return 3;
+            
+            return 4;
+        };
+
+        filteredSchedules.sort((a, b) => {
+            const prioA = getPriority(a);
+            const prioB = getPriority(b);
+
+            // 우선순위가 다르면 우선순위대로 정렬 (숫자가 작을수록 위로)
+            if (prioA !== prioB) {
+                return prioA - prioB;
+            }
+            // 우선순위가 같다면 출발 시간(departure_time) 순으로 오름차순 정렬
+            return a.departure_time.localeCompare(b.departure_time);
+        });
+
+        // 3. 카드 렌더링
+        filteredSchedules.forEach(sch => {
+            // 과거이거나 이미 출발한 셔틀인지 확실하게 플래그(is_past, is_departed)로 확인
+            const isPast = sch.is_past || sch.is_departed;
+            
+            const card = document.createElement('div');
+            // isPast가 참이면 'past' 클래스를 추가하여 회색조로 딤(Dim) 처리
+            card.className = `schedule-card ${isPast ? 'past' : ''}`;
+            
+            card.innerHTML = `
+                <div>
+                    <div class="time">${escapeHtml(sch.departure_time)}</div>
+                    <div class="route">${escapeHtml(sch.route_name)} · ${escapeHtml(sch.direction)}</div>
+                    ${renderBadge(sch)}
+                    <div class="seat">예약 ${sch.reserved_seats}/${sch.total_seats}명</div>
+                </div>
+                <div>${renderButton(sch)}</div>
+            `;
+            listDiv.appendChild(card);
+        });
+    }
+
+    async function fetchSchedules() {
+        const date = dateInput.value;
+        if (!date) return;
+
+        listDiv.innerHTML = '<div class="loading">시간표를 불러오는 중입니다.</div>';
+
+        try {
+            const response = await fetch(`/api/schedules?date=${encodeURIComponent(date)}`);
+            const payload = await response.json();
+
+            if (!response.ok) {
+                listDiv.innerHTML = `<div class="error">${escapeHtml(payload.error || '시간표를 불러오지 못했습니다.')}</div>`;
+                return;
+            }
+
+            noticeDiv.textContent = payload.booking_message || '';
+            allSchedules = payload.schedules; // 변수에 전체 데이터 저장
+            
+            renderSchedules(); // 필터 및 정렬 조건에 맞춰 렌더링 호출
+            
+        } catch (error) {
+            listDiv.innerHTML = `<div class="error">시간표를 불러오지 못했습니다.<br>잠시 후 다시 시도해주세요.</div>`;
+        }
+    }
+
+    async function makeReservation(scheduleId) {
+        const date = dateInput.value;
+        if (!date) return;
+        if (!confirm('해당 셔틀버스를 예약하시겠습니까?')) return;
+
+        try {
+            const response = await fetch('/reserve', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ schedule_id: scheduleId, ride_date: date }) });
+            const result = await response.json();
+
+            if (response.ok) {
+                alert('예약이 성공적으로 완료되었습니다.');
+                await fetchSchedules();
+            } else {
+                alert(result.error || '예약에 실패했습니다.');
+                await fetchSchedules();
+            }
+        } catch (error) { alert('서버 통신 중 오류가 발생했습니다.'); }
+    }
+
+    async function cancelReservation(reservationId) {
+        if (!confirm('정말 이 예약을 취소하시겠습니까?')) return;
+
+        try {
+            const response = await fetch('/cancel', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reservation_id: reservationId }) });
+            const result = await response.json();
+
+            if (response.ok) { alert('예약이 정상적으로 취소되었습니다.'); } 
+            else { alert(result.error || '예약 취소에 실패했습니다.'); }
+            
+            await fetchSchedules();
+        } catch (error) { alert('서버 통신 중 오류가 발생했습니다.'); }
+    }
+</script>
+</body>
+</html>
